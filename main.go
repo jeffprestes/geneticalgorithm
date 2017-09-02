@@ -38,20 +38,21 @@ func main() {
 	characteristicsSet := "abcdefghijklmnopqrstuvxzABCDEFGHIJLKMNOPQRSTUVXZ "
 	fitness := "Hello World"
 	crossover := 0.5
-	mutationIndex := 0.6
-	populationSize := 1000
+	mutationIndex := 0.2
+	populationSize := 2000
 	numGeneration := 0
 	maxGenerations := 100000
-	strongestSurvive := true
+	strongestSurvive := false
 	isolatedPopulation := false
+	reinforce := true
 	hamming := 100
 
 	/*
 		TIMING
 	*/
 	loc, _ := time.LoadLocation("America/Sao_Paulo")
-	now := time.Now().In(loc)
-	fmt.Println("Starting processing at: ", now.Format("2006-01-02 15:04:05"))
+	t1 := time.Now().In(loc)
+	fmt.Println("Starting processing at: ", t1.Format("2006-01-02 15:04:05"))
 
 	hammingInNumberOfDigits = int(round(float64(len(fitness)*hamming/100), 0))
 	//fmt.Println("Hamming in digits is: ", hammingInNumberOfDigits)
@@ -62,13 +63,15 @@ func main() {
 	for numGeneration <= maxGenerations {
 		bestIndividual, secondBestIndividual, bestScore := calculatePopulationScore(fitness, pop)
 		if bestScore > bestScoreMemory {
-			fmt.Printf("\n\n ===== Evaluation results ===== \n\n Best Individual: [%s]\n Best score: [%d]\n\n", bestIndividual, bestScore)
+			fmt.Printf("\n\n ===== Evaluation results ===== \n\n Best Individual: [%s]\n Best score: [%d]\n Generations: [%d]\n\n", bestIndividual, bestScore, numGeneration)
 			bestScoreMemory = bestScore
 			bestIndividualMemory = bestIndividual
 		}
-		if bestScore < bestScoreMemory {
+
+		if reinforce && bestScore < bestScoreMemory {
 			bestIndividual = bestIndividualMemory
 		}
+
 		if bestScore == hammingInNumberOfDigits {
 			fmt.Println("A maquina achou!!!")
 			fmt.Println("Esse é o texto: ", bestIndividual)
@@ -78,13 +81,14 @@ func main() {
 		pop = generateMutatedPopulation(crossover, strongestSurvive, isolatedPopulation, bestIndividual, secondBestIndividual, pop, mutationIndex, characteristicsSet)
 		numGeneration++
 		posHourGlass++
-		if posHourGlass == 10 {
+		if posHourGlass == 50 {
 			posHourGlass = 0
 			fmt.Print(".")
 		}
 	}
-	now = time.Now().In(loc)
-	fmt.Printf("\n\n ===== End results ===== \n\n Finishing processing at: [%s]\n Best Individual: [%s]\n Best score: [%d]\n\n", now.Format("2006-01-02 15:04:05"), bestIndividualMemory, bestScoreMemory)
+	t2 := time.Now().In(loc)
+	dif := t2.Sub(t1).Minutes()
+	fmt.Printf("\n\n ===== End results ===== \n\n Finishing processing at: [%s]\n Time elapsed: [%v]\n Best Individual: [%s]\n Best score: [%d]\n\n", t2.Format("2006-01-02 15:04:05"), dif, bestIndividualMemory, bestScoreMemory)
 }
 
 func generateNewPopulation(fitnessSize int, characteristicsSet string, populationSize int) (population []string) {
@@ -131,9 +135,32 @@ func generateNewIndividual(crossover float64, bestOldIndividual string, oldIndiv
 	max := len(bestOldIndividual)
 	posA := int(round(float64(max)*crossover, 0))
 	posB := max - posA
+	temp := ""
 	//fmt.Printf("[generateNewIndividual] Crossover: %+v - BestOldIndividual: %+v - mutationIndex: %+v - posA: %+v - posB: %+v\n", crossover, bestOldIndividual, mutationIndex, posA, posB)
-	newCreatedIndividual = bestOldIndividual[:posA-1]
-	newCreatedIndividual += oldIndividual[posB:]
+	i := 0
+	for i < posA {
+		pos := rand.Intn(posA)
+		//fmt.Println("pos: ", pos)
+		//fmt.Println("ch: ", string(bestOldIndividual[pos]))
+		temp += string(bestOldIndividual[pos])
+		i++
+	}
+	i = 0
+	for i < posB {
+		pos := rand.Intn(posB)
+		//fmt.Println("pos: ", pos)
+		//fmt.Println("ch: ", string(oldIndividual[pos]))
+		temp += string(oldIndividual[pos])
+		i++
+	}
+	i = 0
+	for i < max {
+		pos := rand.Intn(max)
+		//fmt.Println("pos: ", pos)
+		//fmt.Println("ch: ", string(oldIndividual[pos]))
+		newCreatedIndividual += string(temp[pos])
+		i++
+	}
 	//fmt.Printf("[generateNewIndividual] New Individual before mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
 	newCreatedIndividual = mutateAnIndividual(mutationIndex, characteristicsSet, newCreatedIndividual)
 	//fmt.Printf("[generateNewIndividual] New Individual after mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
