@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 /*
@@ -29,16 +30,28 @@ func main() {
 	var bestScoreMemory int
 	var bestIndividualMemory string
 	var hammingInNumberOfDigits int
+	var posHourGlass int
 
+	/*
+		PARAMETERS
+	*/
 	characteristicsSet := "abcdefghijklmnopqrstuvxzABCDEFGHIJLKMNOPQRSTUVXZ "
 	fitness := "Hello World"
 	crossover := 0.5
 	mutationIndex := 0.6
-	populationSize := 100
+	populationSize := 1000
 	numGeneration := 0
-	maxGenerations := 10000
+	maxGenerations := 100000
 	strongestSurvive := true
+	isolatedPopulation := false
 	hamming := 100
+
+	/*
+		TIMING
+	*/
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
+	now := time.Now().In(loc)
+	fmt.Println("Starting processing at: ", now.Format("2006-01-02 15:04:05"))
 
 	hammingInNumberOfDigits = int(round(float64(len(fitness)*hamming/100), 0))
 	//fmt.Println("Hamming in digits is: ", hammingInNumberOfDigits)
@@ -47,11 +60,14 @@ func main() {
 	numGeneration++
 
 	for numGeneration <= maxGenerations {
-		bestIndividual, bestScore := calculatePopulationScore(fitness, pop)
+		bestIndividual, secondBestIndividual, bestScore := calculatePopulationScore(fitness, pop)
 		if bestScore > bestScoreMemory {
 			fmt.Printf("\n\n ===== Evaluation results ===== \n\n Best Individual: [%s]\n Best score: [%d]\n\n", bestIndividual, bestScore)
 			bestScoreMemory = bestScore
 			bestIndividualMemory = bestIndividual
+		}
+		if bestScore < bestScoreMemory {
+			bestIndividual = bestIndividualMemory
 		}
 		if bestScore == hammingInNumberOfDigits {
 			fmt.Println("A maquina achou!!!")
@@ -59,11 +75,16 @@ func main() {
 			fmt.Printf("Numero de gerações necessárias: [%d]\n\n", numGeneration)
 			return
 		}
-		pop = generateMutatedPopulation(crossover, strongestSurvive, bestIndividual, pop, mutationIndex, characteristicsSet)
+		pop = generateMutatedPopulation(crossover, strongestSurvive, isolatedPopulation, bestIndividual, secondBestIndividual, pop, mutationIndex, characteristicsSet)
 		numGeneration++
-		fmt.Print(".")
+		posHourGlass++
+		if posHourGlass == 10 {
+			posHourGlass = 0
+			fmt.Print(".")
+		}
 	}
-	fmt.Printf("\n\n ===== End results ===== \n\n Best Individual: [%s]\n Best score: [%d]\n\n", bestIndividualMemory, bestScoreMemory)
+	now = time.Now().In(loc)
+	fmt.Printf("\n\n ===== End results ===== \n\n Finishing processing at: [%s]\n Best Individual: [%s]\n Best score: [%d]\n\n", now.Format("2006-01-02 15:04:05"), bestIndividualMemory, bestScoreMemory)
 }
 
 func generateNewPopulation(fitnessSize int, characteristicsSet string, populationSize int) (population []string) {
@@ -79,27 +100,70 @@ func generateNewPopulation(fitnessSize int, characteristicsSet string, populatio
 	return
 }
 
-func generateMutatedPopulation(crossover float64, isElitistAlgorithm bool, oldBestIndividual string, parentPopulation []string, mutationIndex float64, characteristicsSet string) (population []string) {
+func generateMutatedPopulation(crossover float64, isElitistAlgorithm bool, isIsolatedPopulation bool, oldBestIndividual string, oldSecondBestIndividual string, parentPopulation []string, mutationIndex float64, characteristicsSet string) (population []string) {
+	if len(oldBestIndividual) < 2 || len(oldBestIndividual) != len(oldSecondBestIndividual) {
+		panic("[generateMutatedPopulation] I couldn't create a new individual. best: " + oldBestIndividual + " - secondBest: " + oldSecondBestIndividual)
+	}
 	var i int
 	if isElitistAlgorithm {
 		population = append(population, oldBestIndividual)
 		i++
 	}
-	for i < len(parentPopulation) {
-		population = append(population, generateNewIndividual(crossover, oldBestIndividual, parentPopulation[i], mutationIndex, characteristicsSet))
-		i++
+	if isIsolatedPopulation {
+		for i < len(parentPopulation) {
+			population = append(population, generateNewIndividualElitist(crossover, oldBestIndividual, oldSecondBestIndividual, mutationIndex, characteristicsSet))
+			i++
+		}
+	} else {
+		for i < len(parentPopulation) {
+			population = append(population, generateNewIndividual(crossover, oldBestIndividual, parentPopulation[i], mutationIndex, characteristicsSet))
+			i++
+		}
 	}
 	return
 }
 
 func generateNewIndividual(crossover float64, bestOldIndividual string, oldIndividual string, mutationIndex float64, characteristicsSet string) (newCreatedIndividual string) {
-	//fmt.Printf("Crossover: %+v - BestOldIndividual: %+v - oldIndividual: %+v - mutationIndex: %+v - characSet: %+v\n", crossover, bestOldIndividual, oldIndividual, mutationIndex, characteristicsSet)
+	if len(bestOldIndividual) < 2 || len(bestOldIndividual) != len(oldIndividual) {
+		panic("[generateNewIndividual] I couldn't create a new individual. best: " + bestOldIndividual + " - secondBest: " + oldIndividual)
+	}
+	//fmt.Printf("[generateNewIndividual] Crossover: %+v - BestOldIndividual: %+v - oldIndividual: %+v - mutationIndex: %+v - characSet: %+v\n", crossover, bestOldIndividual, oldIndividual, mutationIndex, characteristicsSet)
 	max := len(bestOldIndividual)
 	posA := int(round(float64(max)*crossover, 0))
 	posB := max - posA
-	//fmt.Println("[generateNewIndividual] bestOld: ", bestOldIndividual[:posA-1], " - old: ", oldIndividual[posB:])
+	//fmt.Printf("[generateNewIndividual] Crossover: %+v - BestOldIndividual: %+v - mutationIndex: %+v - posA: %+v - posB: %+v\n", crossover, bestOldIndividual, mutationIndex, posA, posB)
 	newCreatedIndividual = bestOldIndividual[:posA-1]
 	newCreatedIndividual += oldIndividual[posB:]
+	//fmt.Printf("[generateNewIndividual] New Individual before mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
+	newCreatedIndividual = mutateAnIndividual(mutationIndex, characteristicsSet, newCreatedIndividual)
+	//fmt.Printf("[generateNewIndividual] New Individual after mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
+	return
+}
+
+func generateNewIndividualElitist(crossover float64, bestOldIndividual string, oldSecondBestIndividual string, mutationIndex float64, characteristicsSet string) (newCreatedIndividual string) {
+	if len(bestOldIndividual) < 2 || len(bestOldIndividual) != len(oldSecondBestIndividual) {
+		panic("[generateNewIndividualElitist] I couldn't create a new individual. best: " + bestOldIndividual + " - secondBest: " + oldSecondBestIndividual)
+	}
+	max := len(bestOldIndividual)
+	posA := int(round(float64(max)*crossover, 0))
+	posB := max - posA
+	//fmt.Printf("[generateNewIndividualElitist] Crossover: %+v - BestOldIndividual: %+v - SecondBestOldIndividual: %+v - mutationIndex: %+v - posA: %+v - posB: %+v\n", crossover, bestOldIndividual, oldSecondBestIndividual, mutationIndex, posA, posB)
+	i := 0
+	for i < posA {
+		pos := rand.Intn(posA)
+		//fmt.Println("pos: ", pos)
+		//fmt.Println("ch: ", string(bestOldIndividual[pos]))
+		newCreatedIndividual += string(bestOldIndividual[pos])
+		i++
+	}
+	i = 0
+	for i < posB {
+		pos := rand.Intn(posB)
+		//fmt.Println("pos: ", pos)
+		//fmt.Println("ch: ", string(oldSecondBestIndividual[pos]))
+		newCreatedIndividual += string(oldSecondBestIndividual[pos])
+		i++
+	}
 	//fmt.Printf("[generateNewIndividual] New Individual before mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
 	newCreatedIndividual = mutateAnIndividual(mutationIndex, characteristicsSet, newCreatedIndividual)
 	//fmt.Printf("[generateNewIndividual] New Individual after mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
@@ -152,13 +216,17 @@ func calculateIndividualScore(fitness string, individual string) (score int) {
 	return
 }
 
-func calculatePopulationScore(fitness string, population []string) (bestIndividual string, bestScore int) {
+func calculatePopulationScore(fitness string, population []string) (bestIndividual string, secondBestIndividual string, bestScore int) {
 	for _, individual := range population {
 		tempScore := calculateIndividualScore(fitness, individual)
 		if tempScore > bestScore {
+			secondBestIndividual = bestIndividual
 			bestScore = tempScore
 			bestIndividual = individual
 		}
+	}
+	if secondBestIndividual == "" {
+		secondBestIndividual = bestIndividual
 	}
 	return
 }
