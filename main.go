@@ -7,20 +7,25 @@ import (
 )
 
 /*
+
+REDES NEURAIS COM APRENDIZADO COM REFORÇO OU ALGORITMO GENETICO EM GO
+
 Pseudo codigo do algoritmo genetico
  Define as categorias ou o conjunto de dados que limitam
- Define o fitness ou com o que se vai comparar
+ Define o fitness (ou modelo perfeito ou o modelo desejado pelo usuário) ou com o que se vai comparar
  Define a carga genetica que será usada de cada item para gerar novos individuos (crossover)
  Define o percentual aceitável para que o sistema dê como concluído (distancia Hamming)
  Define o tamanho da população
  Define o máximo de gerações
  Define a taxa de mutacao
+ Define se terá aprendizado por reforço
  Cria uma população original
  Avalia população com base no fitnes, ou seja, o quanto o resultado esta próximo do que se espera.
 	 Se for maior ou igual a distancia hamming finaliza o programa
 	 Se for menor, gera-se novos individuos
 		 Se for um algoritmo elitista, armazena os dois que mais se aproximaram e os usam para gerar os novos individuos
 		 Se não for um algoritmo elitista, gera-se individuos com dois elementos aleatórios
+		 Se o aprendizado por reforço estiver definido, ele só altera os cromossomos que não se encaixam no fitness (ou modelo perfeito)
 		 Daí gera-se novos individuos com base na taxa de crossover e na mutacao e em quantidade definida do tamanho da população
 		 Adiciona mais um ao contador de gerações passadas
 */
@@ -43,7 +48,7 @@ func main() {
 	mutationIndex := 0.2
 	populationSize := 45000
 	numGeneration := 0
-	maxGenerations := 300
+	maxGenerations := 1000
 	strongestSurvive := false
 	isolatedPopulation := false
 	hamming := 100
@@ -236,9 +241,9 @@ func generateNewIndividualElitist(fitness string, crossover float64, bestOldIndi
 		newCreatedIndividual += string(oldSecondBestIndividual[pos])
 		i++
 	}
-	//fmt.Printf("[generateNewIndividual] New Individual before mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
+	//fmt.Printf("[generateNewIndividualElitist] New Individual before mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
 	newCreatedIndividual = mutateAnIndividual(mutationIndex, characteristicsSet, newCreatedIndividual)
-	//fmt.Printf("[generateNewIndividual] New Individual after mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
+	//fmt.Printf("[generateNewIndividualElitist] New Individual after mutation: [%s] len: [%d]\n", newCreatedIndividual, len(newCreatedIndividual))
 	return
 }
 
@@ -252,16 +257,16 @@ func mutateAnIndividual(mutationIndex float64, characteristicsSet string, oldInd
 		item := characteristicsSet[pos : pos+1]
 		pos = rand.Intn(len(oldIndividual) - 1)
 		//fmt.Println("[mutateAnIndividual] Individual before: ", newMutatedIndividual)
-		newMutatedIndividual = changeACromossom(pos, item, newMutatedIndividual)
+		newMutatedIndividual = changeAChromosome(pos, item, newMutatedIndividual)
 		//fmt.Println("[mutateAnIndividual] Individual after: ", newMutatedIndividual)
 		numItemsChanged++
 	}
 	return
 }
 
-func changeACromossom(indexOfItemToBeChanged int, newCromossom string, oldIndividual string) (newIndividual string) {
+func changeAChromosome(indexOfItemToBeChanged int, newChromosome string, oldIndividual string) (newIndividual string) {
 	newIndividual = oldIndividual[:indexOfItemToBeChanged]
-	newIndividual += newCromossom
+	newIndividual += newChromosome
 	if indexOfItemToBeChanged < len(oldIndividual) {
 		newIndividual = string(append([]byte(newIndividual), oldIndividual[indexOfItemToBeChanged+1:]...))
 	}
@@ -276,8 +281,8 @@ func changeACromossom(indexOfItemToBeChanged int, newCromossom string, oldIndivi
 */
 func calculateIndividualScore(fitness string, individual string) (score int) {
 	if len(individual) != len(fitness) {
-		fmt.Printf("[calculateIndividualScore] lenIndividual: [%d] - Ind: [%s] - lenFitness: [%d] - Fit: [%s]\n", len(individual), individual, len(fitness), fitness)
-		return
+		errMsg := fmt.Sprintf("[calculateIndividualScore] Individual characteristics length is less than fitness length!\nlenIndividual: [%d] - Ind: [%s] - lenFitness: [%d] - Fit: [%s]\n", len(individual), individual, len(fitness), fitness)
+		panic(errMsg)
 	}
 	for pos := 0; pos < len(fitness); pos++ {
 		//fmt.Printf("[calculateIndividualScore] Pos: [%d] - Individual: [%s] - Fitness: [%s]\n", pos, individual[pos:pos+1], fitness[pos:pos+1])
