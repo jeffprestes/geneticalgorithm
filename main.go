@@ -30,30 +30,30 @@ Pseudo codigo do algoritmo genetico
 		 Adiciona mais um ao contador de gerações passadas
 */
 
-var reinforce = false
+/*
+ GENERIC PARAMS
+*/
+var (
+	reinforce          = false
+	characteristicsSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJLKMNOPQRSTUVWXYZ !.;,?&"
+	fitness            = "qwerty"
+	crossoverIndex     = 0.5
+	crossoverMethod    = "partial_random"
+	mutationIndex      = 0.2
+	populationSize     = 990000
+	numGeneration      = 0
+	maxGenerations     = 1000
+	strongestSurvive   = true
+	isolatedPopulation = false
+	hamming            = 100
+)
+
+//MEMORY/RECORD variables
+var bestScoreMemory, hammingInNumberOfDigits, posHourGlass int
+var bestIndividualMemory, secondBestIndividualMemory string
+var specieEvolution []string
 
 func main() {
-
-	var bestScoreMemory int
-	var bestIndividualMemory, secondBestIndividualMemory string
-	var hammingInNumberOfDigits int
-	var posHourGlass int
-	var specieEvolution []string
-
-	/*
-		PARAMETERS
-	*/
-	characteristicsSet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJLKMNOPQRSTUVWXYZ !.;,?&"
-	fitness := "qwerty"
-	crossover := 0.5
-	mutationIndex := 0.3
-	populationSize := 90000
-	numGeneration := 0
-	maxGenerations := 100000
-	strongestSurvive := true
-	isolatedPopulation := false
-	hamming := 100
-
 	/*
 		TIMING
 	*/
@@ -122,7 +122,7 @@ func main() {
 		}
 
 		//IF NOT, GENERATE NEW POPULATION BASED ON PARAMETERS AND TRY IT AGAIN
-		pop = generateMutatedPopulation(fitness, crossover, strongestSurvive, isolatedPopulation, bestIndividual, secondBestIndividual, pop, mutationIndex, characteristicsSet)
+		pop = generateMutatedPopulation(fitness, crossoverIndex, strongestSurvive, isolatedPopulation, bestIndividual, secondBestIndividual, pop, mutationIndex, characteristicsSet)
 		numGeneration++
 
 		//FOR DEBUGGING: PRINT A POINT AT SCREEN AFTER EACH NEW 50 POPULATION
@@ -199,29 +199,53 @@ func generateNewIndividual(fitness string, crossover float64, bestOldIndividual 
 		//temp += oldIndividual[:posB]
 		newCreatedIndividual = temp
 	} else {
-		i := 0
-		for i < posA {
-			pos := rand.Intn(posA)
-			//fmt.Println("pos: ", pos)
-			//fmt.Println("ch: ", string(bestOldIndividual[pos]))
-			temp += string(bestOldIndividual[pos])
-			i++
-		}
-		i = 0
-		for i < posB {
-			pos := rand.Intn(posB)
-			//fmt.Println("pos: ", pos)
-			//fmt.Println("ch: ", string(oldIndividual[pos]))
-			temp += string(oldIndividual[pos])
-			i++
-		}
-		i = 0
-		for i < max {
-			pos := rand.Intn(max)
-			//fmt.Println("pos: ", pos)
-			//fmt.Println("ch: ", string(oldIndividual[pos]))
-			newCreatedIndividual += string(temp[pos])
-			i++
+		if crossoverMethod == "total_random" {
+			i := 0
+			for i < posA {
+				pos := rand.Intn(posA)
+				//fmt.Println("pos: ", pos)
+				//fmt.Println("ch: ", string(bestOldIndividual[pos]))
+				temp += string(bestOldIndividual[pos])
+				i++
+			}
+			i = 0
+			for i < posB {
+				pos := rand.Intn(posB)
+				//fmt.Println("pos: ", pos)
+				//fmt.Println("ch: ", string(oldIndividual[pos]))
+				temp += string(oldIndividual[pos])
+				i++
+			}
+			i = 0
+			for i < max {
+				pos := rand.Intn(max)
+				//fmt.Println("pos: ", pos)
+				//fmt.Println("ch: ", string(oldIndividual[pos]))
+				newCreatedIndividual += string(temp[pos])
+				i++
+			}
+		} else if crossoverMethod == "partial_random" {
+			i := 0
+			for i < posA {
+				pos := rand.Intn(posA)
+				//fmt.Println("pos: ", pos)
+				//fmt.Println("ch: ", string(bestOldIndividual[pos]))
+				temp += string(bestOldIndividual[pos])
+				i++
+			}
+			i = 0
+			for i < posB {
+				pos := rand.Intn(posB)
+				//fmt.Println("pos: ", pos)
+				//fmt.Println("ch: ", string(oldIndividual[pos]))
+				temp += string(oldIndividual[pos])
+				i++
+			}
+			newCreatedIndividual = temp
+		} else if crossoverMethod == "mixed" {
+			temp += bestOldIndividual[:posA]
+			temp += bestOldIndividual[:posB]
+			newCreatedIndividual = temp
 		}
 	}
 
